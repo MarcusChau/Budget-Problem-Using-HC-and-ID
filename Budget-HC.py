@@ -5,111 +5,136 @@ Author: Marcus Chau
 
 '''
 import random
-import os
-import sys
 
-
-def read_input_data(file_path):
-    """
-    Reads input data from the file.
-    """
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    parts = lines[0].split()
-    target, budget, flag, num_restarts = int(parts[0]), int(parts[1]), parts[2], int(parts[3])
-    items = [(name, int(value), int(cost)) for name, value, cost in (line.split() for line in lines[1:])]
-
-    return target, budget, flag, num_restarts, items
-
-
-def calculate_totals(state, items):
-    """
-    Calculates total value and cost of the selected items.
-    """
-    total_value = sum(value for (name, value, cost), selected in zip(items, state) if selected)
-    total_cost = sum(cost for (name, value, cost), selected in zip(items, state) if selected)
-    return total_value, total_cost
-
-
-def evaluate_error(state, items, target, budget):
-    """
-    Calculates error for the given state.
-    """
-    total_value, total_cost = calculate_totals(state, items)
-    error_cost = max(0, total_cost - budget)
-    error_value = max(0, target - total_value)
-    return error_cost + error_value
-
-
-def hill_climbing(items, target, budget, flag):
-    """
-    Performs the hill climbing algorithm.
-    """
-    current_state = [random.choice([True, False]) for _ in items]
-
-    if flag == 'V':
-        print_state(current_state, items, "Initial State")
-
-    while True:
-        neighbors = [current_state[:i] + [not current_state[i]] + current_state[i+1:] for i in range(len(items))]
-
-        best_neighbor = min(neighbors, key=lambda state: evaluate_error(state, items, target, budget))
-        best_error = evaluate_error(best_neighbor, items, target, budget)
-
-        if best_error >= evaluate_error(current_state, items, target, budget):
-            return current_state
-
-        if flag == 'V':
-            print_state(best_neighbor, items, "Next State")
-
-        current_state = best_neighbor
-
-
-def print_state(state, items, description):
-    """
-    Prints the state of the algorithm.
-    """
-    total_value, total_cost = calculate_totals(state, items)
-    state_items = ' '.join(name for (name, _, _), selected in zip(items, state) if selected)
-    print(f"{description}: {{{state_items}}}. Value = {total_value}. Cost = {total_cost}.")
-
-
-def run_with_random_restarts(file_path):
-    """
-    Runs the algorithm with random restarts.
-    """
-    target, budget, flag, num_restarts, items = read_input_data(file_path)
-    best_state, best_error = None, float('inf')
-
-    for _ in range(num_restarts):
-        state = hill_climbing(items, target, budget, flag)
-        error = evaluate_error(state, items, target, budget)
-
-        if error < best_error:
-            best_error = error
-            best_state = state
-
-    return best_state, items, flag, target, budget
-
-
-def main():
-    """
-    Main function to run the algorithm.
-    """
+def run_hill_climbing_algorithm():
     file_path = 'testHC.txt'
 
-    if not os.path.isfile(file_path):
-        print('Error: File does not exist.')
-        sys.exit(1)
+    file = open(file_path, 'r')
+    lines = file.readlines()
+    file.close()
 
-    state, items, flag, target, budget = run_with_random_restarts(file_path)
-    if evaluate_error(state, items, target, budget) != 0:
+    parts = lines[0].split()
+    target = int(parts[0])
+    budget = int(parts[1])
+    flag = parts[2]
+    num_restarts = int(parts[3])
+
+    items = []
+    for line in lines[1:]:
+        parts = line.split()
+        name = parts[0]
+        value = int(parts[1])
+        cost = int(parts[2])
+        items.append((name, value, cost))
+
+    
+    best_state = None
+    best_error = float('inf')
+    for _ in range(num_restarts):
+        current_state = [random.choice([True, False]) for _ in items]
+
+        if flag == 'V':
+            total_value = 0
+            total_cost = 0
+            for i in range(len(items)):
+                name, value, cost = items[i]
+                selected = current_state[i]
+                if selected:
+                    total_value += value
+                    total_cost += cost
+
+            state_items_arr = []
+            for i in range(len(items)):
+                if current_state[i]:
+                    name, _, _ = items[i]
+                    state_items_arr.append(name)
+            state_items = ' '.join(state_items_arr)
+            print(f"{{{state_items}}}. Value = {total_value}. Cost = {total_cost}. Error = {max(0, total_cost - budget) + max(0, target - total_value)}.")
+
+        while True:
+            neighbors = []
+            for i in range(len(items)):
+                neighbor = current_state.copy()
+                neighbor[i] = not neighbor[i]
+                neighbors.append(neighbor)
+
+            best_neighbor = None
+            best_neighbor_error = float('inf')
+            for neighbor in neighbors:
+                total_value = 0
+                total_cost = 0
+                for i in range(len(items)):
+                    name, value, cost = items[i]
+                    selected = neighbor[i]
+                    if selected:
+                        total_value += value
+                        total_cost += cost
+                error = max(0, total_cost - budget) + max(0, target - total_value)
+
+                if error < best_neighbor_error:
+                    best_neighbor = neighbor
+                    best_neighbor_error = error
+
+            current_error = max(0, total_cost - budget) + max(0, target - total_value)
+            if best_neighbor_error >= current_error:
+                break
+
+            current_state = best_neighbor
+
+            if flag == 'V':
+                total_value = 0
+                total_cost = 0
+                for i in range(len(items)):
+                    name, value, cost = items[i]
+                    selected = current_state[i]
+                    if selected:
+                        total_value += value
+                        total_cost += cost
+
+                state_items_arr = []
+                for i in range(len(items)):
+                    if current_state[i]:
+                        name, _, _ = items[i]
+                        state_items_arr.append(name)
+                state_items = ' '.join(state_items_arr)
+                print(f"{{{state_items}}}. Value = {total_value}. Cost = {total_cost}. Error = {max(0, total_cost - budget) + max(0, target - total_value)}.")
+
+        total_value = 0
+        total_cost = 0
+        for i in range(len(items)):
+            name, value, cost = items[i]
+            selected = current_state[i]
+            if selected:
+                total_value += value
+                total_cost += cost
+        current_error = max(0, total_cost - budget) + max(0, target - total_value)
+
+        if current_error < best_error:
+            best_error = current_error
+            best_state = current_state
+
+
+    if best_error != 0:
         print("No solution found.")
     else:
         print("Found solution:")
-        print_state(state, items, "Solution")
+        total_value = 0
+        total_cost = 0
+        for i in range(len(items)):
+            name, value, cost = items[i]
+            selected = best_state[i]
+            if selected:
+                total_value += value
+                total_cost += cost
+
+        state_items_arr = []
+        for i in range(len(items)):
+            if current_state[i]:
+                name, _, _ = items[i]
+                state_items_arr.append(name)
+        state_items = ' '.join(state_items_arr)
+        print(f"{{{state_items}}}. Value = {total_value}. Cost = {total_cost}. Error = {max(0, total_cost - budget) + max(0, target - total_value)}.")
 
 
 if __name__ == "__main__":
-    main()
+    run_hill_climbing_algorithm()
