@@ -2,6 +2,7 @@
 
 Hill Climbing Algorithm for Budgeted Purchase Problem
 Author: Marcus Chau
+mc8786
 
 '''
 import random

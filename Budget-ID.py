@@ -2,6 +2,7 @@
 
 Iterative Deepening Algorithm for Budgeted Purchase Problem
 Author: Marcus Chau
+mc8786
 
 '''
 def iterative_deeping_algorithm():
